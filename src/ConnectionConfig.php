@@ -6,14 +6,24 @@ use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
 
 final class ConnectionConfig extends SqlConnectionConfig
 {
+    const KEY_MAP = [
+        'username' => 'user',
+        'pass' => 'password',
+        'database' => 'db',
+        'dbname' => 'db',
+        'options' => 'options'
+    ];
+
     const DEFAULT_PORT = 5432;
 
     /** @var string|null */
     private $string;
+    /** @var string|null */
+    private $options;
 
     public static function fromString(string $connectionString): self
     {
-        $parts = self::parseConnectionString($connectionString);
+        $parts = self::parseConnectionString($connectionString, self::KEY_MAP);
 
         if (!isset($parts["host"])) {
             throw new \Error("Host must be provided in connection string");
@@ -24,7 +34,8 @@ final class ConnectionConfig extends SqlConnectionConfig
             (int) ($parts["port"] ?? self::DEFAULT_PORT),
             $parts["user"] ?? null,
             $parts["password"] ?? null,
-            $parts["db"] ?? null
+            $parts["db"] ?? null,
+            $parts["options"] ?? null
         );
     }
 
@@ -33,8 +44,10 @@ final class ConnectionConfig extends SqlConnectionConfig
         int $port = self::DEFAULT_PORT,
         string $user = null,
         string $password = null,
-        string $database = null
+        string $database = null,
+        string $appName = null
     ) {
+        $this->options = $appName;
         parent::__construct($host, $port, $user, $password, $database);
     }
 
@@ -72,6 +85,23 @@ final class ConnectionConfig extends SqlConnectionConfig
             $chunks[] = "dbname=" . $database;
         }
 
+        $options = $this->getOptions();
+        if ($options !== null) {
+            $chunks[] = 'options='.$options;
+        }
+
         return $this->string = \implode(" ", $chunks);
     }
+
+    final public function getOptions():?string {
+        return $this->options;
+    }
+
+    final public function withOptions(string $options=null): self
+    {
+        $new = clone $this;
+        $new->options = $options;
+        return $new;
+    }
+
 }
